@@ -1,0 +1,20 @@
+betafaceapi.api:
+  key: d45fd466-51e2-4701-8da8-04351c872236
+  secret: 171e8465-f548-401d-b63b-caf0dc28df5f
+
+facedetection.inbox: /tmp/facedetection
+
+camel.springboot.jmxEnabled: false
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost/facedetection_dev
+    username: facedetection
+    password: password
+    driverClassName: com.mysql.jdbc.Driver
+    testOnBorrow: true
+    validationQuery: SELECT 1
+  jpa.hibernate:
+    ddl-auto: update
+    naming_strategy: org.hibernate.cfg.ImprovedNamingStrategy
+  output.ansi.enabled: ALWAYS
