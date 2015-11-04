@@ -8,7 +8,6 @@ import eu.micoproject.facedetection.model.betafaceapi.ImageRequestBinary;
 import eu.micoproject.facedetection.repo.ImageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +22,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class BetaFaceApiRoute extends RouteBuilder {
 
-    @Autowired
-    private ImageRepository imageRepository;
-
     /**
      * Configure the route.
      *
@@ -35,7 +31,7 @@ public class BetaFaceApiRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
-        from("file://{{facedetection.inbox}}")
+        from("direct:betafaceapi.upload_new_image_file")
                 .convertBodyTo(ImageRequestBinary.class)
                 .marshal().jacksonxml()
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))
@@ -59,17 +55,6 @@ public class BetaFaceApiRoute extends RouteBuilder {
                 .when(header("betafaceapi.response.code").isEqualTo(0)).to("direct:persist")
                 .when(header("betafaceapi.response.code").isEqualTo(1)).to("direct:betafaceapi.get_image_info")
                 .otherwise().to("log:dead_end");
-
-        from("direct:persist")
-                // Need to handle a response in progress (checksum = null)
-                .convertBodyTo(Image.class)
-                .process(exchange -> {
-
-                    final Image image = (Image) exchange.getIn().getBody();
-                    imageRepository.save(image);
-
-                })
-                .to("mock:foo");
 
     }
 

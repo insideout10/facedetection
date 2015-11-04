@@ -5,5 +5,6 @@
     <logger name="eu.micoproject" level="TRACE"/>
 
     <logger name="org.apache.camel" level="DEBUG"/>
+    <logger name="org.apache.http" level="INFO"/>
 
 </configuration>
