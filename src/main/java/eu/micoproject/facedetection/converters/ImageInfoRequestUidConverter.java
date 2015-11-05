@@ -1,23 +1,18 @@
 package eu.micoproject.facedetection.converters;
 
+import eu.micoproject.facedetection.model.betafaceapi.BetafaceImageInfoResponse;
 import eu.micoproject.facedetection.model.betafaceapi.BetafaceImageResponse;
 import eu.micoproject.facedetection.model.betafaceapi.ImageInfoRequestUid;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.camel.Converter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.stereotype.Component;
 
 /**
- * Converts a {@link BetafaceImageResponse} to an {@link ImageInfoRequestUid} providing a convenient bridge to request
- * Image infos about a recently uploaded image.
+ * Provides conversions to {@link ImageInfoRequestUidConverter}.
  *
  * @since 1.0.0
  */
-@Slf4j
-@Component
-public class BetafaceImageResponseToImageInfoRequestUid implements Converter<BetafaceImageResponse, ImageInfoRequestUid> {
+@Converter
+public class ImageInfoRequestUidConverter {
 
     /**
      * The BetaFaceApi API key.
@@ -36,6 +31,20 @@ public class BetafaceImageResponseToImageInfoRequestUid implements Converter<Bet
     private String apiSecret;
 
     /**
+     * Convert the source {@link BetafaceImageInfoResponse} to an {@link ImageInfoRequestUid} by copying the source imageId
+     * to the destination imageId property.
+     *
+     * @param source The source {@link BetafaceImageInfoResponse}.
+     * @return The {@link ImageInfoRequestUid} instance.
+     * @since 1.0.0
+     */
+    @Converter
+    public ImageInfoRequestUid toImageInfoRequestUid(BetafaceImageInfoResponse source) {
+
+        return new ImageInfoRequestUid(apiKey, apiSecret, source.getImageId());
+    }
+
+    /**
      * Convert the source {@link BetafaceImageResponse} to an {@link ImageInfoRequestUid} by copying the source imageId
      * to the destination imageId property.
      *
@@ -43,10 +52,11 @@ public class BetafaceImageResponseToImageInfoRequestUid implements Converter<Bet
      * @return The {@link ImageInfoRequestUid} instance.
      * @since 1.0.0
      */
-    @Override
-    public ImageInfoRequestUid convert(BetafaceImageResponse source) {
+    @Converter
+    public ImageInfoRequestUid toImageInfoRequestUid(BetafaceImageResponse source) {
 
         return new ImageInfoRequestUid(apiKey, apiSecret, source.getImageId());
     }
+
 
 }

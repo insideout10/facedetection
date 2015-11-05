@@ -18,8 +18,10 @@ public class FaceInfo {
     private Double score;
     private String uid;
     private Double width;
-    private Double x;
-    private Double y;
+    @JsonProperty("x")
+    private Double centerX;
+    @JsonProperty("y")
+    private Double centerY;
     @JsonProperty("image_uid")
     private String imageId;
     @JsonProperty("person_name")

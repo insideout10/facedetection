@@ -1,0 +1,346 @@
+<html>
+<head>
+    <style>
+        #image-view {
+            position: relative;
+        }
+
+        #image-view > img {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="image-view"></div>
+
+<script type="text/html" id="tmpl-image-view">
+    <img src="<%= src %>"/>
+</script>
+
+<script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+<script type="text/javascript" src="js/underscore-min.js"></script>
+<script type="text/javascript" src="js/backbone-min.js"></script>
+
+<script type="text/javascript">
+    (function ($) {
+
+        var fnCoords = function (coords) {
+
+            var x1 = coords[0].x > coords[1].x ? coords[1].x : coords[0].x;
+            var y1 = coords[0].y > coords[1].y ? coords[1].y : coords[0].y;
+            var x2 = coords[0].x > coords[1].x ? coords[0].x : coords[1].x;
+            var y2 = coords[0].y > coords[1].y ? coords[0].y : coords[1].y;
+
+            var width = x2 - x1;
+            var height = y2 - y1;
+
+            return {x: x1, y: y1, width: width, height: height};
+        };
+
+        var HALModel = Backbone.Model.extend({
+
+            urlRoot: '',
+
+            /**
+             * Using HAL, the URL is the ID of the marker. If there's no URL, we provide the default.
+             *
+             * @since 1.0.0
+             */
+            url: function () {
+
+                return this.has('id') ? this.get('id') : this.urlRoot;
+            },
+
+            /**
+             * Initialize the Marker instance.
+             *
+             * @since 1.0.0
+             */
+            initialize: function () {
+
+                this.listenTo(this, 'sync', this.onSync);
+
+            },
+
+            /**
+             * Parses the response and sets the ID to the SELF HREF.
+             *
+             * @since 1.0.0
+             */
+            parse: function (response, options) {
+
+                return _.extend(response, {id: response._links.self.href});
+
+            },
+
+            /**
+             * Receive sync events (fired after a Model has been saved).
+             *
+             * @since 1.0.0
+             */
+            onSync: function (model, resp, options) {
+
+                this.set('id', resp._links.self.href);
+
+            }
+
+        });
+
+        var Image = Backbone.Model.extend({});
+
+        var Images = Backbone.Collection.extend({
+            model: "Image",
+            url: "/api/images"
+        });
+
+        /**
+         * A marker on an image.
+         *
+         * @since 1.0.0
+         */
+        var Marker = HALModel.extend({
+
+            urlRoot: '/api/faces',
+
+            /**
+             * Initialize the Marker instance.
+             *
+             * @since 1.0.0
+             */
+            initialize: function () {
+
+                Marker.__super__.initialize.apply(this, []);
+                
+            },
+
+            parse: function (response, options) {
+
+                return _.extend(response, {id: response._links.self.href});
+
+            },
+
+            /**
+             * Receive sync events (fired after a Model has been saved), it'll bind the marker with an image.
+             *
+             * @since 1.0.0
+             */
+            onSync: function (model, resp, options) {
+                Marker.__super__.onSync.apply(this, [model, resp, options]);
+
+                Backbone.sync('update', model, {
+                    url: resp._links.image.href,
+                    contentType: 'text/uri-list',
+                    data: '/api/images/808',
+                    emulateJSON: false
+                });
+
+            }
+
+        });
+
+        /**
+         * The Markers collection.
+         *
+         * @since 1.0.0
+         */
+        var Markers = Backbone.Collection.extend({
+
+            model: Marker,
+
+            url: "/api/images/808/faces",
+
+            initialize: function () {
+
+            },
+
+            /**
+             * Parse the response to return the embedded markers.
+             *
+             * @since 1.0.0
+             */
+            parse: function (response, options) {
+
+                return response._embedded.faces;
+            }
+
+        });
+
+        var RectView = Backbone.View.extend({
+
+            defaults: {
+                stroke: '#f00'
+            },
+
+            events: {
+                'click': 'select',
+                'dblclick': 'delete'
+            },
+
+            initialize: function (options) {
+
+                this.options = _.extend({}, this.defaults, options);
+                this.listenTo(this.model, 'change:selected', this.render);
+
+                this.render();
+            },
+
+            /**
+             * Render the view.
+             *
+             * @return {RectView}
+             * @since 1.0.0
+             */
+            render: function () {
+
+                // Draw a DIV at the specified locations.
+                this.$el.css("position", "absolute");
+                this.$el.css("border", "1px solid " + this.options.stroke);
+                this.$el.css("top", this.model.get('y'));
+                this.$el.css("left", this.model.get('x'));
+                this.$el.css("width", this.model.get('width'));
+                this.$el.css("height", this.model.get('height'));
+
+                // Set the background color according to the selection.
+                this.$el.css("background-color", this.model.get('selected') ? 'rgba(3, 3, 3, 0.5)' : 'transparent');
+
+                this.$el.html();
+
+                return this;
+            },
+
+            /**
+             * Receive click events.
+             *
+             * @since 1.0.0
+             */
+            select: function () {
+
+                this.model.set('selected', !this.model.get('selected'));
+
+            },
+
+            delete: function () {
+
+                this.model.destroy();
+                this.remove();
+
+            }
+
+        });
+
+        var ImageView = Backbone.View.extend({
+
+            /**
+             * A coordinates buffer.
+             *
+             * @since 1.0.0
+             */
+            buffer: [],
+
+            el: '#image-view',
+
+            events: {
+                'click img': 'click'
+            },
+
+            /**
+             * An array of coordinates in the view.
+             *
+             * @since 1.0.0
+             */
+            subviews: new Backbone.Collection(),
+            markers: new Markers(),
+
+            template: _.template($('#tmpl-image-view').html()),
+
+            initialize: function () {
+
+                this.listenTo(this.subviews, 'add', this.onAddSubview);
+                this.listenTo(this.markers, 'add', this.onAddMarker);
+
+                // Fetch the markers.
+                this.markers.fetch();
+
+                this.render();
+            },
+
+            /**
+             * Render the ImageView.
+             *
+             * @since 1.0.0
+             * @returns {ImageView}
+             */
+            render: function () {
+
+                this.$el.html(this.template(this.model.attributes));
+
+                return this;
+            },
+
+            /**
+             * Handle click events.
+             *
+             * @since 1.0.0
+             * @param event A click event.
+             */
+            click: function (event) {
+
+                // Get the coordinates.
+                var offset = this.$('img').offset();
+                var x = event.pageX - offset.left;
+                var y = event.pageY - offset.top;
+                this.buffer.push({x: x, y: y});
+
+                // If we have two couples of coordinates, draw a rectangle.
+                if (2 === this.buffer.length) {
+
+                    var marker = new Marker(fnCoords(this.buffer));
+                    marker.save();
+                    this.markers.add([marker]);
+
+                    // Empty the buffer.
+                    this.buffer = [];
+
+                }
+
+            },
+
+            onAddSubview: function (subview) {
+
+            },
+
+            /**
+             * This is event is raised when a marker is added.
+             *
+             * @since 1.0.0
+             * @param event
+             */
+            onAddMarker: function (marker) {
+
+                // Create a rectangle and add it to the list of rectangles.
+                var rect = new RectView({
+                    stroke: 'green',     // The stroke color.
+                    model: marker, // The rectangle coordinates.
+                    parent: this
+                });
+                this.subviews.add([rect]);
+                // Append the rectangle to the view.
+                this.$el.append(rect.render().$el);
+
+//                console.log(marker);
+//                marker.save();
+
+            }
+
+        });
+
+        var image = new Backbone.Model({src: '001.jpg'});
+        var view = new ImageView({model: image});
+    })(jQuery);
+</script>
+
+</body>
+</html>

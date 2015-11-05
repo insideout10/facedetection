@@ -45,15 +45,18 @@ public class BetaFaceApiRoute extends RouteBuilder {
                 .to("http4:www.betafaceapi.com/service_json.svc/GetImageInfo")
                 .unmarshal().json(JsonLibrary.Jackson, BetafaceImageInfoResponse.class)
                 .to("log:responses")
-                // Set the response code as a Camel header.
+                // Set the response code as a Camel header, in order to choose later what's the next step.
                 .process(x -> {
                     final BetafaceImageInfoResponse response = (BetafaceImageInfoResponse) x.getIn().getBody();
                     x.getIn().setHeader("betafaceapi.response.code", response.getCode());
                     x.setOut(x.getIn());
                 })
                 .choice()
+                // Success
                 .when(header("betafaceapi.response.code").isEqualTo(0)).to("direct:persist")
+                // Queue, repeat get_image_info
                 .when(header("betafaceapi.response.code").isEqualTo(1)).to("direct:betafaceapi.get_image_info")
+                // Failure
                 .otherwise().to("log:dead_end");
 
     }

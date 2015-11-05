@@ -4,7 +4,9 @@
 
     <logger name="eu.micoproject" level="TRACE"/>
 
-    <logger name="org.apache.camel" level="DEBUG"/>
+    <logger name="org.apache.camel" level="INFO"/>
     <logger name="org.apache.http" level="INFO"/>
+
+    <logger name="org.springframework" level="INFO"/>
 
 </configuration>
