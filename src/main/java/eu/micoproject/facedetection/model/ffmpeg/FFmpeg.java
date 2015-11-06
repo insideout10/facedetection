@@ -110,7 +110,7 @@ public class FFmpeg {
 
         public Builder scale(Long width, Long height) {
 
-            args.add(String.format("-s %dx%d", width, height));
+            args.add(String.format("-vf scale=%d:%d", width, height));
 
             return this;
 

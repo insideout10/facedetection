@@ -39,19 +39,19 @@ public class InboxRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
-        from("file://{{facedetection.inbox}}")
-                // Convert the Generic File to an Image instance.
-                .convertBodyTo(Image.class)
-                // Persist the Image to the datastore and set it as the new exchange body, the Image Id is stored
-                // in the FaceDetectionImageId header.
-                .process(x -> {
-                    final Image image = imageRepository.save((Image) x.getIn().getBody());
-                    x.getIn().setHeader("FaceDetectionImageId", image.getId());
-                    x.getIn().setBody(image);
-                    x.setOut(x.getIn());
-                })
-//                .to("direct:mico.upload_new_image_file");
-                .to("direct:betafaceapi.upload_new_image_file");
+//        from("file://{{facedetection.inbox}}")
+//                // Convert the Generic File to an Image instance.
+//                .convertBodyTo(Image.class)
+//                // Persist the Image to the datastore and set it as the new exchange body, the Image Id is stored
+//                // in the FaceDetectionImageId header.
+//                .process(x -> {
+//                    final Image image = imageRepository.save((Image) x.getIn().getBody());
+//                    x.getIn().setHeader("FaceDetectionImageId", image.getId());
+//                    x.getIn().setBody(image);
+//                    x.setOut(x.getIn());
+//                })
+////                .to("direct:mico.upload_new_image_file");
+//                .to("direct:betafaceapi.upload_new_image_file");
 
         from("direct:persist")
                 // Need to handle a response in progress (checksum = null)

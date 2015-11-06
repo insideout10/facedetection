@@ -1,6 +1,21 @@
 <html>
 <head>
     <style>
+        #thumbnails-view {
+            overflow-x: auto;
+            padding-left: 0;
+            white-space: nowrap;
+        }
+
+        #thumbnails-view li {
+            display: inline;
+            list-style: none;
+        }
+
+        #thumbnails-view img {
+            cursor: pointer;
+        }
+
         #image-view {
             position: relative;
         }
@@ -9,15 +24,21 @@
             position: absolute;
             top: 0;
             left: 0;
+            cursor: crosshair;
         }
     </style>
 </head>
 <body>
 
+<ul id="thumbnails-view"></ul>
 <div id="image-view"></div>
 
+<script type="text/html" id="tmpl-thumbnail-view">
+    <img src="<%= _links.thumbnail.href %>"/>
+</script>
+
 <script type="text/html" id="tmpl-image-view">
-    <img src="<%= src %>"/>
+    <img src="<%= _links.source.href %>"/>
 </script>
 
 <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
@@ -27,7 +48,11 @@
 <script type="text/javascript">
     (function ($) {
 
-        var fnCoords = function (coords) {
+        var fnCoords,
+                eventBus,
+                imageView;
+
+        fnCoords = function (coords) {
 
             var x1 = coords[0].x > coords[1].x ? coords[1].x : coords[0].x;
             var y1 = coords[0].y > coords[1].y ? coords[1].y : coords[0].y;
@@ -40,6 +65,13 @@
             return {x: x1, y: y1, width: width, height: height};
         };
 
+        eventBus = _.extend({}, Backbone.Events);
+
+        /**
+         * A HAL model, compatible with HAL APIs, to be extended by other models.
+         *
+         * @since 1.0.0
+         */
         var HALModel = Backbone.Model.extend({
 
             urlRoot: '',
@@ -73,7 +105,6 @@
             parse: function (response, options) {
 
                 return _.extend(response, {id: response._links.self.href});
-
             },
 
             /**
@@ -89,10 +120,32 @@
 
         });
 
+        /**
+         * The Markers collection.
+         *
+         * @since 1.0.0
+         */
+        var HALCollection = Backbone.Collection.extend({
+
+            elements: '',
+
+            /**
+             * Parse the response to return the embedded markers.
+             *
+             * @since 1.0.0
+             */
+            parse: function (response, options) {
+
+                return response._embedded[this.elements];
+            }
+
+        });
+
         var Image = Backbone.Model.extend({});
 
-        var Images = Backbone.Collection.extend({
-            model: "Image",
+        var Images = HALCollection.extend({
+            model: Image,
+            elements: 'images',
             url: "/api/images"
         });
 
@@ -112,13 +165,7 @@
              */
             initialize: function () {
 
-                Marker.__super__.initialize.apply(this, []);
-                
-            },
-
-            parse: function (response, options) {
-
-                return _.extend(response, {id: response._links.self.href});
+                Marker.__super__.initialize.apply(this, arguments);
 
             },
 
@@ -128,12 +175,14 @@
              * @since 1.0.0
              */
             onSync: function (model, resp, options) {
-                Marker.__super__.onSync.apply(this, [model, resp, options]);
 
+                Marker.__super__.onSync.apply(this, arguments);
+
+                console.log(this);
                 Backbone.sync('update', model, {
                     url: resp._links.image.href,
                     contentType: 'text/uri-list',
-                    data: '/api/images/808',
+                    data: this._links.image.href,
                     emulateJSON: false
                 });
 
@@ -150,9 +199,11 @@
 
             model: Marker,
 
-            url: "/api/images/808/faces",
+            initialize: function (options) {
 
-            initialize: function () {
+                this.options = options || {};
+
+                this.url = options.url;
 
             },
 
@@ -231,6 +282,74 @@
 
         });
 
+        var ThumbnailsView = Backbone.View.extend({
+
+            el: '#thumbnails-view',
+
+            tagName: 'ul',
+
+            initialize: function () {
+
+                this.collection = new Images();
+
+                this.listenTo(this.collection, 'add', this.addImage)
+
+                this.collection.fetch();
+
+                this.render();
+
+            },
+
+            render: function () {
+
+                console.log(this.collection);
+                this.collection.each(function (image) {
+                    console.log(image);
+                }, this);
+
+                return this;
+            },
+
+            addImage: function (model) {
+
+                console.log('addImage', model);
+
+                this.$el.append(new ThumbnailView({model: model}).render().$el);
+
+            }
+
+        });
+
+        var ThumbnailView = Backbone.View.extend({
+
+            events: {
+                'click img': 'select'
+            },
+
+            tagName: 'li',
+
+            template: _.template($("#tmpl-thumbnail-view").html()),
+
+            render: function () {
+
+                this.$el.html(this.template(this.model.attributes));
+
+                return this;
+            },
+
+            /**
+             * This method is called when a thumbnail is clicked.
+             *
+             * @since 1.0.0
+             */
+            select: function (event) {
+
+                eventBus.trigger("select", this.model);
+
+            }
+
+        });
+
         var ImageView = Backbone.View.extend({
 
             /**
@@ -252,17 +371,15 @@
              * @since 1.0.0
              */
             subviews: new Backbone.Collection(),
-            markers: new Markers(),
 
             template: _.template($('#tmpl-image-view').html()),
 
             initialize: function () {
 
+                this.listenTo(this.model, 'change', this.onChange);
                 this.listenTo(this.subviews, 'add', this.onAddSubview);
                 this.listenTo(this.markers, 'add', this.onAddMarker);
-
-                // Fetch the markers.
-                this.markers.fetch();
+                this.listenTo(eventBus, 'select', this.onSelect);
 
                 this.render();
             },
@@ -298,6 +415,8 @@
                 if (2 === this.buffer.length) {
 
                     var marker = new Marker(fnCoords(this.buffer));
+                    marker._links = marker._links || {};
+                    marker._links.image = this.model.get("_links").self;
                     marker.save();
                     this.markers.add([marker]);
 
@@ -330,15 +449,30 @@
                 // Append the rectangle to the view.
                 this.$el.append(rect.render().$el);
 
-//                console.log(marker);
-//                marker.save();
+            },
+
+            onChange: function () {
+
+                this.markers = new Markers({
+                    url: this.model.get("_links").faces.href
+                });
+                this.markers.fetch();
+                this.render();
+
+            },
+
+            onSelect: function (model) {
+
+                this.model.set(model.attributes);
 
             }
 
         });
 
+        var thumbnailsView = new ThumbnailsView();
+
         var image = new Backbone.Model({src: '001.jpg'});
-        var view = new ImageView({model: image});
+        imageView = new ImageView({model: image});
     })(jQuery);
 </script>
 
