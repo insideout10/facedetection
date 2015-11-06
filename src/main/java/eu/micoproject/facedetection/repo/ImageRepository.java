@@ -1,6 +1,7 @@
 package eu.micoproject.facedetection.repo;
 
 import eu.micoproject.facedetection.model.Image;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
 
 /**
@@ -8,6 +9,6 @@ import org.springframework.data.repository.PagingAndSortingRepository;
  *
  * @since 1.0.0
  */
-public interface ImageRepository extends PagingAndSortingRepository<Image, Long> {
+public interface ImageRepository extends CrudRepository<Image, Long> {
 
 }

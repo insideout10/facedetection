@@ -48,7 +48,8 @@
 <script type="text/javascript">
     (function ($) {
 
-        var fnCoords,
+        var authorURI = "http://localhost:8080/api/authors/3",
+                fnCoords,
                 eventBus,
                 imageView;
 
@@ -73,6 +74,8 @@
          * @since 1.0.0
          */
         var HALModel = Backbone.Model.extend({
+
+            blacklist: [],
 
             urlRoot: '',
 
@@ -116,6 +119,10 @@
 
                 this.set('id', resp._links.self.href);
 
+            },
+
+            toJSON: function (options) {
+                return _.omit(this.attributes, this.blacklist);
             }
 
         });
@@ -156,6 +163,12 @@
          */
         var Marker = HALModel.extend({
 
+            blacklist: ['author'],
+
+            defaults: {
+                author: {color: '#00f', name: 'Manual'}
+            },
+
             urlRoot: '/api/faces',
 
             /**
@@ -178,12 +191,21 @@
 
                 Marker.__super__.onSync.apply(this, arguments);
 
-                console.log(this);
+                // Update the linked image then update the linked author, chaining the updates in order to avoid
+                // overlapping transactions.
                 Backbone.sync('update', model, {
                     url: resp._links.image.href,
                     contentType: 'text/uri-list',
                     data: this._links.image.href,
-                    emulateJSON: false
+                    emulateJSON: false,
+                    success: function () {
+                        Backbone.sync('update', model, {
+                            url: resp._links.author.href,
+                            contentType: 'text/uri-list',
+                            data: authorURI,
+                            emulateJSON: false
+                        });
+                    }
                 });
 
             }
@@ -221,10 +243,6 @@
 
         var RectView = Backbone.View.extend({
 
-            defaults: {
-                stroke: '#f00'
-            },
-
             events: {
                 'click': 'select',
                 'dblclick': 'delete'
@@ -248,7 +266,7 @@
 
                 // Draw a DIV at the specified locations.
                 this.$el.css("position", "absolute");
-                this.$el.css("border", "1px solid " + this.options.stroke);
+                this.$el.css("border", "1px solid " + this.model.get('author').color);
                 this.$el.css("top", this.model.get('y'));
                 this.$el.css("left", this.model.get('x'));
                 this.$el.css("width", this.model.get('width'));
@@ -282,12 +300,22 @@
 
         });
 
+        /**
+         * A thumbnails view with all the list of available images.
+         *
+         * @since 1.0.0
+         */
         var ThumbnailsView = Backbone.View.extend({
 
             el: '#thumbnails-view',
 
             tagName: 'ul',
 
+            /**
+             * Initializes the thumbnails view.s
+             *
+             * @since 1.0.0
+             */
             initialize: function () {
 
                 this.collection = new Images();
@@ -300,19 +328,12 @@
 
             },
 
-            render: function () {
-
-                console.log(this.collection);
-                this.collection.each(function (image) {
-                    console.log(image);
-                }, this);
-
-                return this;
-            },
-
+            /**
+             * Called when a thumbnail is added to the collections of thumbnails.
+             *
+             * @since 1.0.0
+             */
             addImage: function (model) {
-
-                console.log('addImage', model);
 
                 this.$el.append(new ThumbnailView({model: model}).render().$el);
 
@@ -371,6 +392,7 @@
              * @since 1.0.0
              */
             subviews: new Backbone.Collection(),
+            markers: new Backbone.Collection(),
 
             template: _.template($('#tmpl-image-view').html()),
 
@@ -378,10 +400,9 @@
 
                 this.listenTo(this.model, 'change', this.onChange);
                 this.listenTo(this.subviews, 'add', this.onAddSubview);
-                this.listenTo(this.markers, 'add', this.onAddMarker);
+
                 this.listenTo(eventBus, 'select', this.onSelect);
 
-                this.render();
             },
 
             /**
@@ -441,7 +462,6 @@
 
                 // Create a rectangle and add it to the list of rectangles.
                 var rect = new RectView({
-                    stroke: 'green',     // The stroke color.
                     model: marker, // The rectangle coordinates.
                     parent: this
                 });
@@ -451,16 +471,33 @@
 
             },
 
+            /**
+             * Listen when the local model is updated and refresh the markers.
+             *
+             * @since 1.0.0
+             */
             onChange: function () {
 
+                // Remove an existing listener.
+                this.stopListening(this.markers, 'add', this.onAddMarker);
+
+                // Set the new collection and listen on this collection.
                 this.markers = new Markers({
                     url: this.model.get("_links").faces.href
                 });
+                this.listenTo(this.markers, 'add', this.onAddMarker);
                 this.markers.fetch();
+
                 this.render();
 
             },
 
+            /**
+             * Listens when a new image is selected and update the local model.
+             *
+             * @param model The selected image.
+             * @since 1.0.0
+             */
             onSelect: function (model) {
 
                 this.model.set(model.attributes);

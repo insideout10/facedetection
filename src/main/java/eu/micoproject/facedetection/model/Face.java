@@ -43,6 +43,10 @@ public class Face implements Serializable {
     @Column(nullable = false)
     private Double height;
 
+    @ManyToOne
+    @JoinColumn(name = "author_id")
+    private Author author;
+
     @Version
     private Long version;
 
