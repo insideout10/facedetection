@@ -47,12 +47,12 @@ public class ImageController {
     }
 
     /**
-     * Get a thumbnail for the specified image.
+     * Get the source image.
      *
      * @param id The {@link Image} id.
-     * @return A thumbnail.
+     * @return The source image.
      * @throws IOException
-     * @throws InterruptedException
+     * @throws InterruptedException * @since 1.0.0
      */
     @RequestMapping(value = "/source", method = RequestMethod.GET, produces = MediaType.IMAGE_PNG_VALUE)
     public FileSystemResource getSource(@PathVariable("id") final Long id, final HttpServletResponse response) throws IOException, InterruptedException {
@@ -60,6 +60,18 @@ public class ImageController {
         final FileSystemResource resource = imageService.getSource(id);
         response.setContentType(Files.probeContentType(Paths.get(resource.getURI())));
         return resource;
+    }
+
+    /**
+     * Submit an {@link Image} for processing.
+     *
+     * @since 1.0.0
+     */
+    @RequestMapping(value = "/submit", method = RequestMethod.POST)
+    public void submit(@PathVariable("id") final Long id) {
+
+        imageService.submit(id);
+
     }
 
 }

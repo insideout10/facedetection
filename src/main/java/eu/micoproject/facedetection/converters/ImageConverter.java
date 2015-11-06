@@ -82,7 +82,7 @@ public class ImageConverter {
     @Converter
     public Image toImage(GenericFile source) {
 
-        return new Image(source.getFileName(), source.getAbsoluteFilePath(), source);
+        return new Image(source.getFileName(), source.getAbsoluteFilePath());
     }
 
     /**

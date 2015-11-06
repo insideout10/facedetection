@@ -32,7 +32,8 @@ public class ImageProcessor implements ResourceProcessor<Resource<Image>> {
         try {
             resource.add(linkTo(methodOn(ImageController.class).getThumbnail(resource.getContent().getId())).withRel("thumbnail"));
             resource.add(linkTo(methodOn(ImageController.class).getSource(resource.getContent().getId(), null)).withRel("source"));
-        } catch (IOException | InterruptedException e) {
+            resource.add(linkTo(ImageController.class, ImageController.class.getMethod("submit", Long.class), resource.getContent().getId()).withRel("submit"));
+        } catch (IOException | InterruptedException | NoSuchMethodException e) {
 
         }
         return resource;

@@ -32,6 +32,8 @@ public class BetaFaceApiRoute extends RouteBuilder {
     public void configure() throws Exception {
 
         from("direct:betafaceapi.upload_new_image_file")
+                // The author id is associated with the faces discovered by this service.
+                .setHeader("FaceDetectionAuthorId", constant(1L))
                 .convertBodyTo(ImageRequestBinary.class)
                 .marshal().jacksonxml()
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/xml"))

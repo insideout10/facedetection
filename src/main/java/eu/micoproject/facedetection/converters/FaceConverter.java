@@ -5,6 +5,12 @@ import eu.micoproject.facedetection.model.betafaceapi.BetafaceImageInfoResponse;
 import eu.micoproject.facedetection.model.betafaceapi.FaceInfo;
 import org.apache.camel.Converter;
 import org.apache.camel.TypeConverters;
+import org.apache.commons.io.IOUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Provides conversion to {@link Face} instances.
@@ -13,6 +19,11 @@ import org.apache.camel.TypeConverters;
  */
 @Converter
 public class FaceConverter implements TypeConverters {
+
+    /**
+     * @since 1.0.0
+     */
+    private final Pattern XWYH_PATTERN = Pattern.compile("#xywh=(\\d+),(\\d+),(\\d+),(\\d+)");
 
     /**
      * Converts a {@link FaceInfo} to a {@link Face}.
@@ -42,6 +53,22 @@ public class FaceConverter implements TypeConverters {
         // collect them to a list.
         return source.getFaces().stream()
                 .map(this::toFace)
+                .toArray(Face[]::new);
+    }
+
+    /**
+     * Converts an {@link InputStream} to an array of {@link Face}s.
+     *
+     * @param source An {@link InputStream} instance.
+     * @return An array of {@link Face}s.
+     */
+    @Converter
+    public Face[] toFaceArray(InputStream source) throws IOException {
+
+        return IOUtils.readLines(source).stream()
+                .map(XWYH_PATTERN::matcher)
+                .filter(Matcher::find)
+                .map(m -> new Face(Double.valueOf(m.group(1)), Double.valueOf(m.group(2)), Double.valueOf(m.group(3)), Double.valueOf(m.group(4))))
                 .toArray(Face[]::new);
     }
 

@@ -1,7 +1,11 @@
 package eu.micoproject.facedetection.services;
 
+import eu.micoproject.facedetection.model.Image;
 import eu.micoproject.facedetection.model.ffmpeg.FFmpeg;
 import eu.micoproject.facedetection.repo.ImageRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.camel.EndpointInject;
+import org.apache.camel.ProducerTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -15,6 +19,7 @@ import java.io.IOException;
  *
  * @since 1.0.0
  */
+@Slf4j
 @Service
 public class ImageService {
 
@@ -33,6 +38,14 @@ public class ImageService {
      */
     @Value("${facedetection.thumbnail.height:120}")
     private Long scaleHeight;
+
+    /**
+     * The {@link ProducerTemplate} to send an image to Camel.
+     *
+     * @since 1.0.0
+     */
+    @EndpointInject(uri = "direct:inbox")
+    private ProducerTemplate producer;
 
     /**
      * The Process service.
@@ -95,6 +108,18 @@ public class ImageService {
 
         // Return the File System resource on the output.
         return new FileSystemResource(imageRepository.findOne(id).getAbsoluteFilePath());
+    }
+
+    /**
+     * Submit an {@link Image} for processing.
+     *
+     * @param id The {@link Image} id.
+     * @since 1.0.0
+     */
+    public void submit(final Long id) {
+
+        producer.sendBody(imageRepository.findOne(id));
+
     }
 
 }

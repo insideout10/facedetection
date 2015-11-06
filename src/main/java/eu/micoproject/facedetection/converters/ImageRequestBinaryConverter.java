@@ -9,6 +9,9 @@ import org.apache.commons.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+
 /**
  * Provides conversions to {@link ImageRequestBinary}.
  *
@@ -57,9 +60,12 @@ public class ImageRequestBinaryConverter {
      * @since 1.0.0
      */
     @Converter
-    public ImageRequestBinary toImageRequestBinary(Image source) {
+    public ImageRequestBinary toImageRequestBinary(Image source) throws FileNotFoundException {
 
-        return this.toImageRequestBinary(source.getFile());
+        final byte[] bytes = typeConverter.convertTo(byte[].class, new FileInputStream(source.getAbsoluteFilePath()));
+        final String base64 = Base64.encodeBase64String(bytes);
+
+        return new ImageRequestBinary(this.apiKey, this.apiSecret, this.detectionFlags, base64, source.getFilename());
     }
 
     /**

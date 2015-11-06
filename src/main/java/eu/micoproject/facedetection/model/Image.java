@@ -38,9 +38,6 @@ public class Image implements Serializable {
     @OneToMany(mappedBy = "image", fetch = FetchType.EAGER)
     private List<Face> faces = new ArrayList<>();
 
-    @Transient
-    private transient GenericFile file;
-
     @Version
     private Long version;
 
@@ -69,14 +66,12 @@ public class Image implements Serializable {
      * Create an Image instance with the specified filename and file source.
      *
      * @param filename The filename.
-     * @param file     The file source.
      * @since 1.0.0
      */
-    public Image(String filename, String absoluteFilePath, GenericFile file) {
+    public Image(String filename, String absoluteFilePath) {
         this(filename);
 
         this.absoluteFilePath = absoluteFilePath;
-        this.file = file;
     }
 
 }

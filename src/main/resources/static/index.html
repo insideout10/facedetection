@@ -16,11 +16,11 @@
             cursor: pointer;
         }
 
-        #image-view {
+        #image-view .container {
             position: relative;
         }
 
-        #image-view > img {
+        #image-view .container > img {
             position: absolute;
             top: 0;
             left: 0;
@@ -31,6 +31,7 @@
 <body>
 
 <ul id="thumbnails-view"></ul>
+<div id="submit-button-view"></div>
 <div id="image-view"></div>
 
 <script type="text/html" id="tmpl-thumbnail-view">
@@ -38,7 +39,10 @@
 </script>
 
 <script type="text/html" id="tmpl-image-view">
-    <img src="<%= _links.source.href %>"/>
+    <button>Submit</button>
+    <div class="container">
+        <img src="<%= _links.source.href %>"/>
+    </div>
 </script>
 
 <script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
@@ -383,7 +387,8 @@
             el: '#image-view',
 
             events: {
-                'click img': 'click'
+                'click img': 'click',
+                'click button': 'submit'
             },
 
             /**
@@ -448,6 +453,15 @@
 
             },
 
+            submit: function (event) {
+
+                var view = this;
+                $.post(this.model.get("_links").submit.href, function(data) {
+                    view.markers.fetch();
+                });
+
+            },
+
             onAddSubview: function (subview) {
 
             },
@@ -467,7 +481,7 @@
                 });
                 this.subviews.add([rect]);
                 // Append the rectangle to the view.
-                this.$el.append(rect.render().$el);
+                this.$(".container").append(rect.render().$el);
 
             },
 
@@ -505,6 +519,7 @@
             }
 
         });
+
 
         var thumbnailsView = new ThumbnailsView();
 
