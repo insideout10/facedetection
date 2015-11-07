@@ -1,24 +1,18 @@
 package eu.micoproject.facedetection.routes;
 
-import com.sun.tools.javac.jvm.Gen;
 import eu.micoproject.facedetection.model.Image;
 import eu.micoproject.facedetection.model.mico.UriResponse;
 import eu.micoproject.facedetection.repo.ImageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.model.dataformat.CsvDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.net.URI;
 import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,12 +31,11 @@ public class MicoRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
-        final Map<String, Object> images = new HashMap<>();
-
         final CsvDataFormat csv = new CsvDataFormat();
         csv.setSkipHeaderRecord(true);
 
         from("direct:mico.upload_new_image_file")
+                .errorHandler(defaultErrorHandler().redeliveryDelay(1000).maximumRedeliveries(10).log("Retrying..."))
                 // The author id is associated with the faces discovered by this service.
                 .setHeader("FaceDetectionAuthorId", constant(2L))
                 .process(x -> {

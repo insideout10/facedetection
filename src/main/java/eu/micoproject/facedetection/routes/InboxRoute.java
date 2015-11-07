@@ -9,8 +9,11 @@ import eu.micoproject.facedetection.repo.AuthorRepository;
 import eu.micoproject.facedetection.repo.FaceRepository;
 import eu.micoproject.facedetection.repo.ImageRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.file.GenericFile;
+import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -77,7 +81,8 @@ public class InboxRoute extends RouteBuilder {
                         "direct:mico.upload_new_image_file",
                         "direct:betafaceapi.upload_new_image_file"
                 )
-                .end();
+                .end()
+                .log(LoggingLevel.INFO, "All service requests completed.");
 
         from("direct:persist")
                 // Need to handle a response in progress (checksum = null)
@@ -146,8 +151,7 @@ public class InboxRoute extends RouteBuilder {
 //                    // Forward the message.
 //                    ex.setOut(ex.getIn());
 //                })
-                .to("log:complete")
-                .to("mock:foo");
+                .log(LoggingLevel.INFO, "A service request completed [ author id ${header.FaceDetectionAuthorId} ]");
 
     }
 

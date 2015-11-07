@@ -1,11 +1,13 @@
 package eu.micoproject.facedetection.services;
 
+import eu.micoproject.facedetection.model.Face;
 import eu.micoproject.facedetection.model.Image;
 import eu.micoproject.facedetection.model.ffmpeg.FFmpeg;
 import eu.micoproject.facedetection.repo.ImageRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.*;
+import org.apache.camel.component.direct.DirectConsumer;
+import org.apache.camel.component.direct.DirectEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -40,11 +42,19 @@ public class ImageService {
     private Long scaleHeight;
 
     /**
-     * The {@link ProducerTemplate} to send an image to Camel.
+     * The Camel endpoint.
      *
      * @since 1.0.0
      */
     @EndpointInject(uri = "direct:inbox")
+    private Endpoint endpoint;
+
+    /**
+     * The {@link ProducerTemplate} to send an image to Camel.
+     *
+     * @since 1.0.0
+     */
+    @Autowired
     private ProducerTemplate producer;
 
     /**
@@ -118,7 +128,40 @@ public class ImageService {
      */
     public void submit(final Long id) {
 
-        producer.sendBody(imageRepository.findOne(id));
+        submit(imageRepository.findOne(id));
+
+    }
+
+    /**
+     * Submit an {@link Image} for processing.
+     *
+     * @param image The {@link Image}.
+     * @since 1.0.0
+     */
+    public void submit(final Image image) {
+
+        log.info("An analysis request started.");
+
+        // Process the route synchronously (to avoid overloading the external service).
+        final Object response = producer.requestBody(endpoint, image);
+
+        log.info(String.format("An analysis request completed [ response :: %s ]", response.toString()));
+
+//        final Long authorId = exchange.getIn().getHeader("FaceDetectionAuthorId", Long.class);
+//        final Face[] faces = (Face[]) exchange.getIn().getBody();
+//
+//        log.info(String.format("Found %d faces [ author id :: %d ][ image :: %s ]", faces.length, authorId, image.getFilename()));
+
+    }
+
+    /**
+     * Submit all {@link Image}s for processing.
+     *
+     * @since 1.0.0
+     */
+    public void submit() {
+
+        imageRepository.findAll().forEach(this::submit);
 
     }
 

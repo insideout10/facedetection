@@ -21,7 +21,7 @@ import java.nio.file.Paths;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping(value = "/api/images/{id}")
+@RequestMapping(value = "/api/images")
 public class ImageController {
 
     /**
@@ -33,6 +33,18 @@ public class ImageController {
     private ImageService imageService;
 
     /**
+     * Submits all the {@link Image}s for processing.
+     *
+     * @since 1.0.0
+     */
+    @RequestMapping(value = "/submit", method = RequestMethod.POST)
+    public void submit() {
+
+        imageService.submit();
+
+    }
+
+    /**
      * Get a thumbnail for the specified image.
      *
      * @param id The {@link Image} id.
@@ -40,7 +52,7 @@ public class ImageController {
      * @throws IOException
      * @throws InterruptedException
      */
-    @RequestMapping(value = "/thumbnail", method = RequestMethod.GET, produces = MediaType.IMAGE_PNG_VALUE)
+    @RequestMapping(value = "/{id}/thumbnail", method = RequestMethod.GET, produces = MediaType.IMAGE_PNG_VALUE)
     public FileSystemResource getThumbnail(@PathVariable("id") final Long id) throws IOException, InterruptedException {
 
         return imageService.getThumbnail(id);
@@ -54,7 +66,7 @@ public class ImageController {
      * @throws IOException
      * @throws InterruptedException * @since 1.0.0
      */
-    @RequestMapping(value = "/source", method = RequestMethod.GET, produces = MediaType.IMAGE_PNG_VALUE)
+    @RequestMapping(value = "/{id}/source", method = RequestMethod.GET, produces = MediaType.IMAGE_PNG_VALUE)
     public FileSystemResource getSource(@PathVariable("id") final Long id, final HttpServletResponse response) throws IOException, InterruptedException {
 
         final FileSystemResource resource = imageService.getSource(id);
@@ -67,7 +79,7 @@ public class ImageController {
      *
      * @since 1.0.0
      */
-    @RequestMapping(value = "/submit", method = RequestMethod.POST)
+    @RequestMapping(value = "/{id}/submit", method = RequestMethod.POST)
     public void submit(@PathVariable("id") final Long id) {
 
         imageService.submit(id);
