@@ -13,6 +13,8 @@ The official **MICO** Web Site is [www.mico-project.eu](http://www.mico-project.
 
 <img src="https://github.com/insideout10/facedetection/blob/develop/images/screenshot-facedetection-2015_11_06 19_59.png?raw=true" />
 
+Images used in this screenshot are copyright (c) of [Greenpeace International](http://greenpeace.org).
+
 ## Description
 
 This tool has been designed with the purpose of executing the following tasks: 
