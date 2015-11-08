@@ -1,4 +1,4 @@
-<a href="http://blog.insideout.io/about-us"><img src="https://insideout10.github.io/facedetection/images/insideout10-opensource.png" /></a>
+<a href="http://blog.insideout.io/about-us"><img src="https://github.com/insideout10/facedetection/blob/develop/images/insideout10-mico-opensource.png?raw=true" /></a>
 
 Facedetection for MICO
 ==============================
