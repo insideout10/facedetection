@@ -270,7 +270,7 @@
 
                 // Draw a DIV at the specified locations.
                 this.$el.css("position", "absolute");
-                this.$el.css("border", "1px solid " + this.model.get('author').color);
+                this.$el.css("border", this.model.get('author').border);
                 this.$el.css("top", this.model.get('y'));
                 this.$el.css("left", this.model.get('x'));
                 this.$el.css("width", this.model.get('width'));

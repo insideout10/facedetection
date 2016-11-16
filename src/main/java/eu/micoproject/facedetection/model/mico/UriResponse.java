@@ -10,6 +10,8 @@ import lombok.Data;
 @Data
 public class UriResponse {
 
-    private String uri;
+    private String itemUri;
+
+    private String created;
 
 }

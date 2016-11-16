@@ -78,8 +78,8 @@ public class InboxRoute extends RouteBuilder {
                 })
                 .multicast().parallelProcessing()
                 .to(
-                        "direct:mico.upload_new_image_file",
-                        "direct:betafaceapi.upload_new_image_file"
+                        "direct:mico.upload_new_image_file"
+//                        "direct:betafaceapi.upload_new_image_file"
                 )
                 .end()
                 .log(LoggingLevel.INFO, "All service requests completed.");

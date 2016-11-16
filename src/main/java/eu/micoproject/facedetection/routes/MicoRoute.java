@@ -1,6 +1,7 @@
 package eu.micoproject.facedetection.routes;
 
 import eu.micoproject.facedetection.model.Image;
+import eu.micoproject.facedetection.model.mico.InjectAddResponse;
 import eu.micoproject.facedetection.model.mico.UriResponse;
 import eu.micoproject.facedetection.repo.ImageRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.net.URLConnection;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Defines the route to publish to MICO.
@@ -37,7 +36,7 @@ public class MicoRoute extends RouteBuilder {
         from("direct:mico.upload_new_image_file")
                 .errorHandler(defaultErrorHandler().redeliveryDelay(1000).maximumRedeliveries(10).log("Retrying..."))
                 // The author id is associated with the faces discovered by this service.
-                .setHeader("FaceDetectionAuthorId", constant(2L))
+                .setHeader("FaceDetectionAuthorId", constant(5L))
                 .process(x -> {
                     // Remove the body.
                     x.getIn().setBody(null);
@@ -49,7 +48,7 @@ public class MicoRoute extends RouteBuilder {
                 .process(x -> {
 
                     // Store the MICO Item URI.
-                    x.getIn().setHeader("MicoItemUri", ((UriResponse) x.getIn().getBody()).getUri());
+                    x.getIn().setHeader("MicoItemUri", ((UriResponse) x.getIn().getBody()).getItemUri());
 
                     // Get the image id, load the image file and send it to MICO.
                     final Long imageId = x.getIn().getHeader("FaceDetectionImageId", Long.class);
@@ -66,20 +65,20 @@ public class MicoRoute extends RouteBuilder {
                     x.setOut(x.getIn());
                 })
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
-                .setHeader(Exchange.HTTP_QUERY, simple("ci=${header.MicoItemUri}&type=${header.Content-Type}&name=${header.CamelFileName}"))
+                .setHeader(Exchange.HTTP_QUERY, simple("itemUri=${header.MicoItemUri}&type=mico%3AImage&name=${header.CamelFileName}")) // &mimeType=${header.Content-Type}
                 .to("http4:{{mico.api.server}}/broker/inject/add?authUsername={{mico.api.username}}&authPassword={{mico.api.password}}")
-                .unmarshal().json(JsonLibrary.Jackson, UriResponse.class)
+                .unmarshal().json(JsonLibrary.Jackson, InjectAddResponse.class)
                 .process(x -> {
 
                     // Record the part URI.
-                    x.getIn().setHeader("MicoPartUri", ((UriResponse) x.getIn().getBody()).getUri());
+                    x.getIn().setHeader("MicoPartUri", ((InjectAddResponse) x.getIn().getBody()).getPartUri());
                     x.getIn().setBody(null);
 
                     // Pass over the message.
                     x.setOut(x.getIn());
                 })
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
-                .setHeader(Exchange.HTTP_QUERY, simple("ci=${header.MicoItemUri}"))
+                .setHeader(Exchange.HTTP_QUERY, simple("item=${header.MicoItemUri}"))
                 .to("http4:{{mico.api.server}}/broker/inject/submit?authUsername={{mico.api.username}}&authPassword={{mico.api.password}}")
                 .process(x -> {
 
@@ -93,21 +92,16 @@ public class MicoRoute extends RouteBuilder {
                 .setHeader("Accept", constant("text/csv"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/sparql-query"))
                 .setHeader(Exchange.CONTENT_ENCODING, constant("UTF-8"))
-                .setBody(simple("PREFIX mico: <http://www.mico-project.eu/ns/platform/1.0/schema#>\n" +
+                .setBody(simple("PREFIX mmm: <http://www.mico-project.eu/ns/mmm/2.0/schema#>\n" +
                         "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
                         "PREFIX oa: <http://www.w3.org/ns/oa#>\n" +
-                        "PREFIX dc: <http://purl.org/dc/elements/1.1/>\n" +
-                        "PREFIX dct: <http://purl.org/dc/terms/>\n" +
                         "\n" +
-                        "SELECT DISTINCT ?region WHERE {\n" +
-                        " <${header.MicoItemUri}> mico:hasContentPart ?cp .\n" +
-                        "   ?cp mico:hasContent ?annot .\n" +
-                        "   ?annot oa:hasBody ?body .\n" +
-                        "   ?annot oa:hasTarget ?tgt .\n" +
-                        "   ?tgt  oa:hasSelector ?fs .\n" +
-                        "   ?fs rdf:value ?region\n" +
-                        " FILTER EXISTS {?body rdf:type mico:FaceDetectionBody}\n" +
-                        "}\n"))
+                        "SELECT DISTINCT ?o WHERE {\n" +
+                        "  <${header.MicoItemUri}> mmm:hasPart [ \n" +
+                        "    mmm:hasBody [ a <http://www.mico-project.eu/ns/mmmterms/2.0/schema#FaceDetectionBody> ] ;\n" +
+                        "    mmm:hasTarget [ oa:hasSelector [ rdf:value ?o ] ]\n" +
+                        "  ]" +
+                        "}"))
                 .to("http4:{{mico.api.server}}/marmotta/sparql/select?authUsername={{mico.api.username}}&authPassword={{mico.api.password}}")
                 .to("direct:persist");
 

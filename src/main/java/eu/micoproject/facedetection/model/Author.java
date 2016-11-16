@@ -38,6 +38,8 @@ public class Author implements Serializable {
      */
     private String color;
 
+    private String border;
+
     /**
      * The list of {@link Face}s created by this author.
      *

@@ -2,6 +2,7 @@ package eu.micoproject.facedetection.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.apache.camel.component.file.GenericFile;
 import org.hibernate.annotations.Type;
 import org.joda.time.DateTime;
@@ -21,6 +22,7 @@ import java.util.List;
 @Data
 @Entity
 @NoArgsConstructor
+@ToString(exclude = "faces")
 public class Image implements Serializable {
 
     private static final long serialVersionUID = 2L;
